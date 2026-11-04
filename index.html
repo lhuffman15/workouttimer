@@ -234,7 +234,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
   // Sound
   let soundOn = true, actx = null;
   function setSound(on) { soundOn = on; soundBtn.setAttribute("aria-pressed", on); soundBtn.textContent = on ? "Sound on" : "Sound off"; }
-  soundBtn.addEventListener("click", () => { setSound(!soundOn); save(); unlockAudio(); if (soundOn) beep(880, 0.35); });
+  soundBtn.addEventListener("click", () => { setSound(!soundOn); save(); unlockAudio(); if (soundOn) beep(587, 0.4); });
   let out = null;
   function unlockAudio() {
     // iOS 17+: play through the speaker even when the silent switch is on
@@ -258,11 +258,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
     try {
       const t = actx.currentTime + delay, g = actx.createGain();
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
-      g.gain.setValueAtTime(0.9, t + dur - 0.03);
+      g.gain.exponentialRampToValueAtTime(0.9, t + 0.025);
+      g.gain.setValueAtTime(0.9, t + dur - 0.08);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       g.connect(out);
-      [[1, 1], [2, 0.35], [3, 0.12]].forEach(([mult, level]) => {
+      [[1, 1], [2, 0.2]].forEach(([mult, level]) => {
         const o = actx.createOscillator(), og = actx.createGain();
         o.type = "sine"; o.frequency.value = freq * mult; og.gain.value = level;
         o.connect(og).connect(g); o.start(t); o.stop(t + dur + 0.02);
@@ -290,7 +290,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
   }
   function fmt(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
-  function beginPhase(ph) {
+  function beginPhase(ph, first = false) {
     phase = ph;
     phaseLen = ph === "hold" ? holdSec() : moveSec();
     endAt = performance.now() + phaseLen * 1000;
@@ -299,8 +299,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
     phaseEl.textContent = ph === "hold" ? "Hold" : "Switch";
     nextEl.textContent = ph === "hold" ? `Then ${moveSec()} sec to switch` : `Next: position ${position} · ${holdSec()} sec`;
     countEl.classList.remove("flash"); void countEl.offsetWidth; countEl.classList.add("flash");
-    if (ph === "hold") { beep(880, 0.4); vibrate(300); }
-    else { beep(520, 0.3); vibrate([120, 80, 120]); }
+    if (ph === "hold") { beep(first ? 440 : 587, 0.45); vibrate(300); }
+    else { beep(392, 0.35); vibrate([120, 80, 120]); }
   }
 
   function tick() {
@@ -314,7 +314,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
     }
     const whole = Math.ceil(left);
     if (whole !== lastWhole) {
-      if (lastWhole !== null && whole <= 3 && whole >= 1 && phase === "hold") beep(660, 0.12);
+      if (lastWhole !== null && whole <= 3 && whole >= 1 && phase === "hold") beep(440, 0.15);
       lastWhole = whole;
     }
     render(left, phaseLen, phase);
@@ -327,7 +327,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--phase); out
     unlockAudio();
     if (state === "idle") {
       position = 1; elapsedBefore = 0; startedAt = performance.now();
-      state = "running"; beginPhase("hold");
+      state = "running"; beginPhase("hold", true);
     } else if (state === "paused") {
       startedAt = performance.now();
       endAt = performance.now() + remainingMs;
